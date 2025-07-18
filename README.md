@@ -113,7 +113,3 @@ To further improve this project:
 3. Make your changes.
 4. Push your branch: `git push origin feature-name`
 5. Create a pull request.
-
----
-
-You can copy and adapt this structure for your project.
