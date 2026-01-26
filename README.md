@@ -1,4 +1,4 @@
-# Anomaly Detection Script
+# Anomaly Detection Model
 
 ![Python](https://img.shields.io/badge/language-Python-blue)
 
