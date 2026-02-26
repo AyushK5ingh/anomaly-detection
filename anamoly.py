@@ -1,3 +1,11 @@
+# Anomaly Detection Script
+# This script performs anomaly detection on an Excel (.xlsx) file
+# using both rule-based and statistical (Isolation Forest) methods.
+# It highlights detected anomalies in the output Excel file and
+# provides detailed error analysis, including confusion matrix, F1 score,
+# accuracy, precision, and recall for each column and for all columns combined.
+# It also generates a separate file with missed (red), identified (green), and overpredicted (yellow) cells.
+
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import IsolationForest
@@ -7,13 +15,28 @@ import os
 import accuracy
 import errors
 
-INPUT= "Test"
+INPUT= "Train"
 INPUT_FILE = INPUT + ".xlsx"
 OUTPUT_FILE = INPUT + "_output.xlsx"
+
+# If your input file is in a different directory, set INPUT_FILE to the full path:
+# Example:
+# INPUT = "Train"
+# INPUT_FILE = r"D:/your_folder/Train.xlsx"
+# Otherwise, by default, INPUT_FILE = INPUT + ".xlsx" (in the current directory).
 HIGHLIGHT_COLOR = "FFFF00"
 
 def infer_column_types(df, threshold=0.8):
-    """Infer column types: numeric, datetime, categorical, or mixed."""
+    """
+    Infer column types for a DataFrame: numeric, datetime, categorical, or mixed.
+
+    Args:
+        df (pd.DataFrame): Input data.
+        threshold (float): Proportion threshold for type assignment.
+
+    Returns:
+        dict: Mapping of column name to inferred type.
+    """
     types = {}
     for col in df.columns:
         col_data = df[col].dropna()
@@ -34,7 +57,15 @@ def infer_column_types(df, threshold=0.8):
     return types
 
 def rule_based_anomalies(df, types):
-    """Detect missing, type mismatch, out-of-range, and length-inconsistent anomalies."""
+    """
+    Detect missing, type mismatch, out-of-range, and length-inconsistent anomalies using rules.
+ performance metrics of model on the dataset   Args:
+        df (pd.DataFrame): Input data.
+        types (dict): Column type mapping.
+
+    Returns:
+        pd.DataFrame: DataFrame of anomaly labels ('' if normal).
+    """
     anomalies = pd.DataFrame('', index=df.index, columns=df.columns)
     anomalies[df.isnull()] = 'missing'
     for col in df.columns:
@@ -42,7 +73,7 @@ def rule_based_anomalies(df, types):
             coerced = pd.to_numeric(df[col], errors='coerce')
             mask = df[col].notnull() & coerced.isnull()
             anomalies.loc[mask, col] = 'type_mismatch'
-            # Length inconsistency: flag if less than 70% match mode length
+            # Length inconsistency: flag if less than 85% match mode length
             valid_mask = (anomalies[col] == '')
             valid_values = df.loc[valid_mask, col].astype(str)
             lengths = valid_values.str.len()
@@ -75,7 +106,17 @@ def rule_based_anomalies(df, types):
     return anomalies
 
 def isolation_forest_anomalies(df, types, contamination=0.001):
-    """Isolation Forest-based anomaly detection for numeric columns."""
+    """
+    Isolation Forest-based anomaly detection for numeric columns.
+
+    Args:
+        df (pd.DataFrame): Input data.
+        types (dict): Column type mapping.
+        contamination (float): Proportion of anomalies to expect.
+
+    Returns:
+        pd.DataFrame: DataFrame of anomaly labels ('' if normal).
+    """
     anomalies = pd.DataFrame('', index=df.index, columns=df.columns)
     num_cols = [col for col in df.columns if types[col] == 'numeric']
     if num_cols and len(df) > 10:
@@ -97,7 +138,16 @@ def isolation_forest_anomalies(df, types, contamination=0.001):
     return anomalies
 
 def combine_anomalies(rule_anom, iso_anom):
-    """Combine rule-based and isolation forest anomalies, prioritizing rule-based."""
+    """
+    Combine rule-based and isolation forest anomalies, prioritizing rule-based results.
+
+    Args:
+        rule_anom (pd.DataFrame): Rule-based anomaly DataFrame.
+        iso_anom (pd.DataFrame): Isolation Forest anomaly DataFrame.
+
+    Returns:
+        pd.DataFrame: Combined anomaly DataFrame.
+    """
     combined = rule_anom.copy()
     for col in iso_anom.columns:
         for idx in iso_anom.index:
@@ -106,7 +156,14 @@ def combine_anomalies(rule_anom, iso_anom):
     return combined
 
 def replace_and_highlight(df, anomalies, output_file):
-    """Replace anomalous cells with error label and highlight them in the Excel output."""
+    """
+    Replace anomalous cells with error label and highlight them in the Excel output.
+
+    Args:
+        df (pd.DataFrame): Original data.
+        anomalies (pd.DataFrame): Anomaly labels.
+        output_file (str): Path to output Excel file.
+    """
     df_out = df.copy()
     for col in df.columns:
         for idx in df.index:
@@ -123,6 +180,14 @@ def replace_and_highlight(df, anomalies, output_file):
     wb.save(output_file)
 
 def main():
+    """
+    Main entry point for anomaly detection and evaluation.
+
+    - Uses INPUT as the file name (without extension) for the model.
+    - Generates an output Excel file with highlighted anomalies.
+    - Prints accuracy and error analysis (missed, overpredicted, identified) by calling accuracy.py.
+    - Compares highlights between input and output files by calling errors.py.
+    """
     if not os.path.exists(INPUT_FILE):
         print(f"Input file not found: {INPUT_FILE}")
         return

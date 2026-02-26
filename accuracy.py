@@ -1,8 +1,21 @@
+# accuracy.py
+# This script provides detailed error analysis, including confusion matrix, F1 score,
+# accuracy, precision, and recall for each column and for all columns combined.
+
 import openpyxl
 import numpy as np
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score, accuracy_score
 
 def get_highlight_matrix(excel_file, sheet_name=None):
+    """
+    Extracts a binary matrix from highlighted cells in an Excel file, ignoring the first column.
+    Each cell is 1 if highlighted (non-default fill), else 0.
+    Args:
+        excel_file (str): Path to the Excel file.
+        sheet_name (str, optional): Sheet name to read. If None, uses active sheet.
+    Returns:
+        np.ndarray: 2D array of binary highlight values.
+    """
     wb = openpyxl.load_workbook(excel_file, data_only=True)
     ws = wb[sheet_name] if sheet_name else wb.active
     matrix = []
@@ -15,6 +28,15 @@ def get_highlight_matrix(excel_file, sheet_name=None):
     return np.array(matrix)
 
 def compare_excel_highlights(file1, file2, sheet1=None, sheet2=None):
+    """
+    Compares highlighted cells between two Excel files and prints per-column and overall metrics.
+    Args:
+        file1 (str): Path to ground truth Excel file.
+        file2 (str): Path to model output Excel file.
+        sheet1, sheet2 (str, optional): Sheet names for each file.
+    Prints:
+        Confusion matrix, accuracy, precision, recall, F1 score for each column and overall.
+    """
     arr1 = get_highlight_matrix(file1, sheet1)
     arr2 = get_highlight_matrix(file2, sheet2)
     if arr1.shape != arr2.shape:
@@ -67,5 +89,9 @@ def compare_excel_highlights(file1, file2, sheet1=None, sheet2=None):
     print(f"F1 Score:           {f1*100:.2f}%")
 
 if __name__ == "__main__":
-    # Example usage: compare highlighted blocks directly, ignoring the first column
-    compare_excel_highlights("Train_Quality 1.xlsx", "Train_output.xlsx")
+    # Usage: Enter the file name (without extension) for which you want to compare model output
+    # Example: If your file is "Train.xlsx", enter "Train"
+    input_base = input("Enter file name (without extension) to compare: ").strip()
+    gt_file = input_base + ".xlsx"  # Ground truth file
+    model_file = input_base + "_output.xlsx"  # Model output file
+    compare_excel_highlights(gt_file, model_file)
